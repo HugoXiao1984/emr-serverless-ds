@@ -6,13 +6,13 @@ def emr_serverless_task():
     try:
         # 创建 EMR Serverless Session
         session_emrserverless = Session(
-            application_id='your-application-id-here',
-            logs_s3_path='s3://xxx/xx',
+            application_id='00fokrodkuci2g09',
+            logs_s3_path='s3://emr-spark-hugo/logs/',
             spark_conf='--conf spark.executor.cores=8 --conf spark.executor.memory=32g --conf spark.driver.cores=4 --conf spark.driver.memory=16g',
-            job_role='arn:aws:iam::your-account-id:role/your-custom-role',
-            dolphin_s3_path='s3://your-custom-dolphin-path/',
-            tempfile_s3_path='s3://your-custom-temp-path/',
-            python_venv_s3_path='s3://your-custom-python-venv-path/custom_venv.tar.gz'
+            job_role='arn:aws:iam::535002884571:role/service-role/AmazonEMR-ExecutionRole-1733971980623',
+            dolphin_s3_path='s3://emr-spark-hugo/dolphine/',
+            tempfile_s3_path='s3://emr-spark-hugo/tempfile/',
+            python_venv_s3_path='s3://emr-spark-hugo/python_venv/custom_venv.tar.gz'
         )
 
         # 提交 SQL 语句
