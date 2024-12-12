@@ -8,7 +8,7 @@ def emr_serverless_task():
         session_emrserverless = Session(
             application_id='00fokrodkuci2g09',
             logs_s3_path='s3://emr-spark-hugo/logs/',
-            spark_conf='--conf spark.executor.cores=8 --conf spark.executor.memory=32g --conf spark.driver.cores=4 --conf spark.driver.memory=16g --jars s3://emr-spark-hugo/jars/config-1.4.1.jar',
+            spark_conf='--conf spark.executor.cores=8 --conf spark.executor.memory=32g --conf spark.driver.cores=4 --conf spark.driver.memory=16g --jars s3://emr-spark-hugo/jars/config-1.4.1.jar --files s3://eu-spark-emr/application1.properties --conf "spark.driver.extraJavaOptions=-Dconfig.file=application1.properties"',
             job_role='arn:aws:iam::535002884571:role/service-role/AmazonEMR-ExecutionRole-1733971980623',
             dolphin_s3_path='s3://emr-spark-hugo/dolphine/',
             tempfile_s3_path='s3://emr-spark-hugo/tempfile/',
