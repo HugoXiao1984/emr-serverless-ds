@@ -18,7 +18,7 @@ def emr_serverless_task():
              + '--conf spark.driver.extraJavaOptions=-Dconfig.file=application1.properties', # Java配置
              + '-DscheduleTime=$(schedule_time)'  # 添加scheduleTime参数
              + '-DoffsetHour=$(offset_hour)',     # 添加offsetHour参数
-            job_role='arn:aws:iam::535002884571:role/service-role/AmazonEMR-ExecutionRole-1733971980623',
+            job_role='arn:aws:iam::accountid:role/service-role/AmazonEMR-ExecutionRole-1733971980623',
             dolphin_s3_path='s3://emr-spark-hugo/dolphine/',
             tempfile_s3_path='s3://emr-spark-hugo/tempfile/',
             python_venv_s3_path='s3://emr-spark-hugo/python_venv/custom_venv.tar.gz'
