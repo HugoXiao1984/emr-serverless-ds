@@ -29,7 +29,7 @@ class Session:
 
         self.application_id = application_id
 
-        self.region='ap-southeast-1'
+        self.region='us-east-1'
         self.job_role = job_role
         self.dolphin_s3_path = dolphin_s3_path
         self.logs_s3_path=logs_s3_path
