@@ -4,10 +4,9 @@ from string import Template
 import time
 import boto3
 from datetime import datetime
-from pydolphinscheduler.tasks.python import Python
-from pydolphinscheduler.core.engine import TaskResult
 
-# this py is for submit job to emr on ec2 and emr serverless 
+
+# this py is for submit job to emr serverless 
 
 # EMRResult 类用于存储 EMR 作业的运行 ID 和状态
 class EMRResult:
@@ -120,92 +119,73 @@ class EmrServerlessSession:
         self.spark_conf=spark_conf
 
     # 提交 SQL 作业到 EMR Serverless
-    def submit_sql(self,jobname, sql):
-        # 将 SQL 写入临时文件
-        print(f"RUN SQL:{sql}")
-        self.python_venv_conf=''
-        with open(
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
-        ) as f:
-            query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
-
-            script_bucket = self.tempfile_s3_path.split('/')[2]
-            script_key = '/'.join(self.tempfile_s3_path.split('/')[3:])
-
-            current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-            script_key = script_key+"sql_template_"+current_time+".py"
-            self.s3_client.put_object(
-                Body=query_file, Bucket=script_bucket, Key=script_key
-            )
-
-            script_file=f"s3://{script_bucket}/{script_key}"
-            result= self._submit_job_emr(jobname, script_file)
-
-            #delete the temp file
-            self.s3_client.delete_object(
-                Bucket=script_bucket, Key=script_key
-            )
-            return result
-    def submit_file(self,jobname, filename):  #serverless
-        # temporary file for the sql parameter
-        print(f"RUN Script :{filename}")
-
-        self.python_venv_conf=''
-        if self.python_venv_s3_path and self.python_venv_s3_path != '':
-            self.python_venv_conf = f"--conf spark.archives={self.python_venv_s3_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"
-
-
-        script_file=f"{self.dolphin_s3_path}{filename}"
-        result= self._submit_job_emr(jobname, script_file)
-
+    def submit_sql(self, jobname, sql):
+        self.logger.info(f"Submitting SQL job: {jobname}")
+        self.logger.debug(f"SQL query: {sql}")
+    
+    try:
+        # 直接提交 SQL 查询
+        result = self._submit_job_emr(jobname, sql)
+        self.logger.info(f"Job {jobname} submitted successfully")
         return result
+    except Exception as e:
+        self.logger.error(f"Error submitting job {jobname}: {str(e)}")
+        raise
 
 
-    def _submit_job_emr(self, name, script_file):#serverless
+   def _submit_job_emr(self, name, script_or_sql, is_sql=False):
+    if is_sql:
         job_driver = {
             "sparkSubmit": {
-                "entryPoint": f"{script_file}",
-                "sparkSubmitParameters": f"{self.spark_conf} --conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory {self.python_venv_conf}",
+                "entryPoint": "command-runner.jar",
+                "entryPointArguments": ["spark-sql", "-e", script_or_sql],
+                "sparkSubmitParameters": f"{self.spark_conf} --conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
             }
         }
-        print(f"job_driver:{job_driver}")
-        response = self.client.start_job_run(
-            applicationId=self.application_id,
-            executionRoleArn=self.job_role,
-            name=name,
-            jobDriver=job_driver,
-            configurationOverrides={
-                "monitoringConfiguration": {
-                    "s3MonitoringConfiguration": {
-                        "logUri": self.logs_s3_path,
-                    }
+    else:
+        job_driver = {
+            "sparkSubmit": {
+                "entryPoint": f"{script_or_sql}",
+                "sparkSubmitParameters": f"{self.spark_conf} --conf spark.hadoop.hive.metastore.client.factory.class=com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
+            }
+        }
+
+    print(f"job_driver:{job_driver}")
+    response = self.client.start_job_run(
+        applicationId=self.application_id,
+        executionRoleArn=self.job_role,
+        name=name,
+        jobDriver=job_driver,
+        configurationOverrides={
+            "monitoringConfiguration": {
+                "s3MonitoringConfiguration": {
+                    "logUri": self.logs_s3_path,
                 }
-            },
-        )
+            }
+        },
+    )
 
-        job_run_id = response.get("jobRunId")
-        print(f"Emr Serverless Job submitted, job id: {job_run_id}")
+    job_run_id = response.get("jobRunId")
+    print(f"Emr Serverless Job submitted, job id: {job_run_id}")
 
-        job_done = False
-        status="PENDING"
-        while not job_done:
-            status = self.get_job_run(job_run_id).get("state")
-            print(f"current status:{status}")
-            job_done = status in [
-                "SUCCESS",
-                "FAILED",
-                "CANCELLING",
-                "CANCELLED",
-            ]
+    job_done = False
+    status = "PENDING"
+    while not job_done:
+        status = self.get_job_run(job_run_id).get("state")
+        print(f"current status:{status}")
+        job_done = status in [
+            "SUCCESS",
+            "FAILED",
+            "CANCELLING",
+            "CANCELLED",
+        ]
+        time.sleep(10)
 
-            time.sleep(10)
-
-        if status == "FAILED":
-            self.print_driver_log(job_run_id,log_type="stderr")
-            self.print_driver_log(job_run_id,log_type="stdout")
-            raise Exception(f"EMR Serverless job failed:{job_run_id}")
-        return EMRResult(job_run_id,status)
-
+    if status == "FAILED":
+        self.print_driver_log(job_run_id, log_type="stderr")
+        self.print_driver_log(job_run_id, log_type="stdout")
+        raise Exception(f"EMR Serverless job failed:{job_run_id}")
+    return EMRResult(job_run_id, status)
 
     def get_job_run(self, job_run_id: str) -> dict:
         response = self.client.get_job_run(
