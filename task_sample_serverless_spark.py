@@ -1,6 +1,5 @@
 from emr_comm_serverless_spark import Session
-from pydolphinscheduler.tasks.python import Python
-from pydolphinscheduler.core.engine import TaskResult
+
 
 def emr_serverless_task():
     try:
@@ -44,11 +43,20 @@ def emr_serverless_task():
     except Exception as e:
         return TaskResult.failure(f"EMR Serverless task failed with error: {str(e)}")
 
+
+if __name__ == "__main__":
+    success = emr_serverless_task()
+    if success:
+        print("Task completed successfully.")
+    else:
+        print("Task failed.")
+
+
 # 创建 Python 任务
-emr_task = Python(
-    name="EMR_Serverless_Task",
-    definition=emr_serverless_task
-)
+#emr_task = Python(
+#    name="EMR_Serverless_Task",
+#    definition=emr_serverless_task
+#)
 
 # 如果需要设置任务的其他属性，可以在这里添加
 # 例如：emr_task.set_task_priority(2)
