@@ -212,16 +212,16 @@ def emr_serverless_task():
         )
 
         # 提交脚本文件
-        script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
+        #script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
 
         # 提交 SQL 语句
         sql_result = session_emrserverless.submit_sql("sql-task", "SELECT 'Hello, Spark SQL!' AS greeting")
 
         # 检查脚本任务状态
-        if script_result.status == "SUCCESS":
-            print(f"EMR Serverless script task completed successfully. Job Run ID: {script_result.job_run_id}")
-        else:
-            print(f"EMR Serverless script task did not complete successfully. Status: {script_result.status}")
+        #if script_result.status == "SUCCESS":
+        #    print(f"EMR Serverless script task completed successfully. Job Run ID: {script_result.job_run_id}")
+        #else:
+        #    print(f"EMR Serverless script task did not complete successfully. Status: {script_result.status}")
 
         # 检查 SQL 任务状态
         if sql_result.status == "SUCCESS":
@@ -230,7 +230,8 @@ def emr_serverless_task():
             print(f"EMR Serverless SQL task did not complete successfully. Status: {sql_result.status}")
 
         # 只要有一个任务成功，就返回 True
-        return script_result.status == "SUCCESS" or sql_result.status == "SUCCESS"
+        #return script_result.status == "SUCCESS" 
+        return sql_result.status == "SUCCESS"
 
     except Exception as e:
         print(f"EMR Serverless task failed with error: {str(e)}")
@@ -239,7 +240,7 @@ def emr_serverless_task():
 if __name__ == "__main__":
     success = emr_serverless_task()
     if success:
-        print("At least one task completed successfully.")
+        print("Task completed successfully.")
         sys.exit(0)
     else:
         print("All tasks failed.")
