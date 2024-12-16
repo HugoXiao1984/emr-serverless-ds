@@ -47,6 +47,7 @@ class Session:
             tempfile_s3_path=self.tempfile_s3_path,
             #python_venv_s3_path=self.python_venv_s3_path,
             spark_conf=self.spark_conf
+            init_template_sql_string=self.initTemplateSQLString
         )
 
     # 提交文件作业
@@ -115,7 +116,7 @@ class EmrServerlessSession:
                  tempfile_s3_path,
                  #python_venv_s3_path,
                  spark_conf,
-                 init_template_sql_string
+                 init_template_sql_string==None
                  ):
         self.s3_client = boto3.client("s3")
         self.region=region
