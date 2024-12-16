@@ -6,14 +6,17 @@ import boto3
 from datetime import datetime
 import sys
 
+
+# EMRResult 类用于存储 EMR 作业的运行 ID 和状态
 class EMRResult:
     def __init__(self, job_run_id, status):
         self.job_run_id = job_run_id
         self.status = status
-
+        
+# Session 类用于管理 EMR Serverless 作业的提交和执行
 class Session:
     def __init__(self,
-                 application_id='',
+                 application_id='',# 设置 EMR Serverless 应用 ID
                  job_role='arn:aws:iam::******:role/AmazonEMR-ExecutionRole-1694412227712',
                  dolphin_s3_path='s3://*****/dolphinscheduler/ec2-user/resources/',
                  logs_s3_path='s3://aws-logs-****-ap-southeast-1/elasticmapreduce/',
@@ -42,19 +45,21 @@ class Session:
             tempfile_s3_path=self.tempfile_s3_path,
             spark_conf=self.spark_conf,
         )
-
+    # 提交文件作业
     def submit_file(self, jobname, filename):
         result = self.session.submit_file(jobname, filename)
         if result.status == "FAILED":
             raise Exception(f"ERROR：任务失败 - Job Run ID: {result.job_run_id}")
         return result
-
+        
+    # 提交 SQL 作业
     def submit_sql(self, jobname, sql):
         result = self.session.submit_sql(jobname, sql)
         if result.status == "FAILED":
             raise Exception(f"ERROR：任务失败 - Job Run ID: {result.job_run_id}")
         return result
-
+        
+    # 获取默认的 EMR Serverless 应用 ID，找了第一个Application，是支持Spark的
     def getDefaultApplicationId(self):
         emr_applications = self.client_serverless.list_applications()
         spark_applications = [app for app in emr_applications['applications'] if app['type'] == 'Spark']
@@ -65,6 +70,7 @@ class Session:
         else:
             raise Exception("没有找到活跃的 EMR Serverless 应用")
 
+    # 初始化 SQL 模板
     def initTemplateSQLString(self):
        return '''
 from pyspark.sql import SparkSession
@@ -79,6 +85,7 @@ df = spark.sql("$query")
 df.show()
     '''
 
+# EMR Serverless 作业提交类
 class EmrServerlessSession:
     def __init__(self,
                  region,
@@ -103,6 +110,7 @@ class EmrServerlessSession:
         script_file = f"{self.dolphin_s3_path}{filename}"
         return self._submit_job_emr(jobname, script_file)
 
+    # 提交 SQL 作业到 EMR Serverless
     def submit_sql(self, jobname, sql):
         print(f"RUN SQL:{sql}")
         query_file = Template(self.initTemplateSQLString()).substitute(query=sql.replace('"', '\\"'))
@@ -202,6 +210,7 @@ df.show()
 
 def emr_serverless_task():
     try:
+        # 创建 EMR Serverless Session
         session_emrserverless = Session(
             application_id='00fokrodkuci2g09',
             logs_s3_path='s3://emr-spark-hugo/logs/',
@@ -229,7 +238,7 @@ def emr_serverless_task():
         else:
             print(f"EMR Serverless SQL task did not complete successfully. Status: {sql_result.status}")
 
-        # 只要有一个任务成功，就返回 True
+        # 任务成功，返回 True
         #return script_result.status == "SUCCESS" 
         return sql_result.status == "SUCCESS"
 
@@ -243,5 +252,5 @@ if __name__ == "__main__":
         print("Task completed successfully.")
         sys.exit(0)
     else:
-        print("All tasks failed.")
+        print("Task failed.")
         sys.exit(1)
