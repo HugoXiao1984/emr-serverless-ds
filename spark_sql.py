@@ -272,11 +272,11 @@ def emr_serverless_task():
         )
 
         # 提交脚本文件
-        #script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
+        script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
 
 
         # 提交 SQL 语句
-        sql_result = session_emrserverless.submit_sql("sql-task", "SELECT * FROM xxtable LIMIT 10")
+        sql_result = session_emrserverless.submit_sql("sql-task", "SELECT 'Hello, Spark SQL!' AS greeting")
 
         # 检查任务执行结果
         if script_result:
