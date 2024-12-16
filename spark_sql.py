@@ -73,38 +73,6 @@ class Session:
         else:
             raise Exception("没有找到活跃的 EMR Serverless 应用")
 
-    # 初始化 SQL 模板文件
-    def initTemplateSQLFile(self):
-        with open('sql_template.py', 'w') as f:
-            f.write('''
-from pyspark.sql import SparkSession
-
-spark = (
-    SparkSession.builder.enableHiveSupport()
-    .appName("Python Spark SQL basic example")
-    .getOrCreate()
-)
-
-df = spark.sql("$query")
-df.show()
-        ''')
-
-    def initTemplateSQLString(self):
-       template = '''
-from pyspark.sql import SparkSession
-
-spark = (
-    SparkSession.builder.enableHiveSupport()
-    .appName("Python Spark SQL basic example")
-    .getOrCreate()
-)
-
-df = spark.sql("$query")
-df.show()
-    '''
-       return template
-
-
 # EMR Serverless 作业提交类
 class EmrServerlessSession:
     def __init__(self,
@@ -129,19 +97,12 @@ class EmrServerlessSession:
         self.tempfile_s3_path=tempfile_s3_path
         #self.python_venv_s3_path=python_venv_s3_path
         self.spark_conf=spark_conf
-        #self.init_template_sql_string = init_template_sql_string
 
     # 提交 SQL 作业到 EMR Serverless
 
     def submit_file(self,jobname, filename):  #serverless
         # temporary file for the sql parameter
         print(f"RUN Script :{filename}")
-
-        #self.python_venv_conf=''
-        #if self.python_venv_s3_path and self.python_venv_s3_path != '':
-        #    self.python_venv_conf = f"--conf spark.archives={self.python_venv_s3_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"
-
-
         script_file=f"{self.dolphin_s3_path}{filename}"
         result= self._submit_job_emr(jobname, script_file)
 
@@ -166,11 +127,6 @@ df.show()
     def submit_sql(self,jobname, sql):
         # 将 SQL 写入临时文件
         print(f"RUN SQL:{sql}")
-        #self.python_venv_conf=''
-        #with open(
-        #        os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
-        #) as f:
-            #query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
         query_file = Template(self.initTemplateSQLString()).substitute(query=sql.replace('"', '\\"'))
         script_bucket = self.tempfile_s3_path.split('/')[2]
         script_key = '/'.join(self.tempfile_s3_path.split('/')[3:])
