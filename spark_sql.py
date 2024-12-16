@@ -47,7 +47,7 @@ class Session:
             tempfile_s3_path=self.tempfile_s3_path,
             #python_venv_s3_path=self.python_venv_s3_path,
             spark_conf=self.spark_conf
-            init_template_sql_string=self.initTemplateSQLString
+            init_template_sql_string=self.initTemplateSQLString() 
         )
 
     # 提交文件作业
