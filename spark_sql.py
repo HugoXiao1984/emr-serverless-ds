@@ -47,7 +47,7 @@ class Session:
             tempfile_s3_path=self.tempfile_s3_path,
             #python_venv_s3_path=self.python_venv_s3_path,
             spark_conf=self.spark_conf,
-            init_template_sql_string=self.initTemplateSQLString() 
+            #init_template_sql_string=self.initTemplateSQLString() 
         )
 
     # 提交文件作业
@@ -116,7 +116,7 @@ class EmrServerlessSession:
                  tempfile_s3_path,
                  #python_venv_s3_path,
                  spark_conf,
-                 init_template_sql_string==None
+                 #init_template_sql_string
                  ):
         self.s3_client = boto3.client("s3")
         self.region=region
@@ -129,7 +129,7 @@ class EmrServerlessSession:
         self.tempfile_s3_path=tempfile_s3_path
         #self.python_venv_s3_path=python_venv_s3_path
         self.spark_conf=spark_conf
-        self.init_template_sql_string = init_template_sql_string 
+        #self.init_template_sql_string = init_template_sql_string
 
     # 提交 SQL 作业到 EMR Serverless
 
@@ -146,6 +146,21 @@ class EmrServerlessSession:
         result= self._submit_job_emr(jobname, script_file)
 
         return result
+    
+    def initTemplateSQLString(self):
+       template = '''
+from pyspark.sql import SparkSession
+
+spark = (
+    SparkSession.builder.enableHiveSupport()
+    .appName("Python Spark SQL basic example")
+    .getOrCreate()
+)
+
+df = spark.sql("$query")
+df.show()
+    '''
+       return template
 
     # 提交 SQL 作业到 EMR Serverless
     def submit_sql(self,jobname, sql):
@@ -257,7 +272,7 @@ def emr_serverless_task():
         )
 
         # 提交脚本文件
-        script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
+        #script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
 
 
         # 提交 SQL 语句
