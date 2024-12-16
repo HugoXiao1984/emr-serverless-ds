@@ -46,7 +46,7 @@ class Session:
             logs_s3_path=self.logs_s3_path,
             tempfile_s3_path=self.tempfile_s3_path,
             #python_venv_s3_path=self.python_venv_s3_path,
-            spark_conf=self.spark_conf
+            spark_conf=self.spark_conf,
             init_template_sql_string=self.initTemplateSQLString() 
         )
 
