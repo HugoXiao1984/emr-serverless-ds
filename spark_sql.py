@@ -114,7 +114,8 @@ class EmrServerlessSession:
                  logs_s3_path,
                  tempfile_s3_path,
                  #python_venv_s3_path,
-                 spark_conf
+                 spark_conf,
+                 init_template_sql_string
                  ):
         self.s3_client = boto3.client("s3")
         self.region=region
@@ -127,6 +128,7 @@ class EmrServerlessSession:
         self.tempfile_s3_path=tempfile_s3_path
         #self.python_venv_s3_path=python_venv_s3_path
         self.spark_conf=spark_conf
+        self.init_template_sql_string = init_template_sql_string 
 
     # 提交 SQL 作业到 EMR Serverless
 
