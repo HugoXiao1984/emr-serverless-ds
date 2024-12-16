@@ -148,29 +148,29 @@ class EmrServerlessSession:
     def submit_sql(self,jobname, sql):
         # 将 SQL 写入临时文件
         print(f"RUN SQL:{sql}")
-        self.python_venv_conf=''
-        with open(
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
-        ) as f:
+        #self.python_venv_conf=''
+        #with open(
+        #        os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
+        #) as f:
             #query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
-            query_file = Template(self.initTemplateSQLString()).substitute(query=sql.replace('"', '\\"'))
-            script_bucket = self.tempfile_s3_path.split('/')[2]
-            script_key = '/'.join(self.tempfile_s3_path.split('/')[3:])
+        query_file = Template(self.initTemplateSQLString()).substitute(query=sql.replace('"', '\\"'))
+        script_bucket = self.tempfile_s3_path.split('/')[2]
+        script_key = '/'.join(self.tempfile_s3_path.split('/')[3:])
 
-            current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-            script_key = script_key+"sql_template_"+current_time+".py"
-            self.s3_client.put_object(
-                Body=query_file, Bucket=script_bucket, Key=script_key
-            )
+        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        script_key = script_key+"sql_template_"+current_time+".py"
+        self.s3_client.put_object(
+            Body=query_file, Bucket=script_bucket, Key=script_key
+        )
 
-            script_file=f"s3://{script_bucket}/{script_key}"
-            result= self._submit_job_emr(jobname, script_file)
+        script_file=f"s3://{script_bucket}/{script_key}"
+        result= self._submit_job_emr(jobname, script_file)
 
             #delete the temp file
-            self.s3_client.delete_object(
-                Bucket=script_bucket, Key=script_key
-            )
-            return result
+        self.s3_client.delete_object(
+            Bucket=script_bucket, Key=script_key
+        )
+        return result
 
 
     def _submit_job_emr(self, name, script_file):#serverless
