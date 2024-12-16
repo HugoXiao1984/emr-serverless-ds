@@ -4,12 +4,12 @@ from string import Template
 import time
 import boto3
 from datetime import datetime
+import sys
 
 class EMRResult:
     def __init__(self,job_run_id,status):
         self.job_run_id=job_run_id
         self.status=status
-
 
 class Session:
     def __init__(self,
@@ -49,15 +49,18 @@ class Session:
             spark_conf=self.spark_conf
         )
 
-
-
-
     # 提交文件作业
     def submit_file(self,jobname, filename):
         result=  self.session.submit_file(jobname,filename)
         if result.status == "FAILED":
             raise Exception("ERROR：任务失败")
 
+    # 提交 SQL 作业
+    def submit_sql(self,jobname, sql):
+        result= self.session.submit_sql(jobname,sql)
+        if result.status == "FAILED" :
+            raise Exception("ERROR：任务失败")
+    
     # 获取默认的 EMR Serverless 应用 ID，找了第一个Application，是支持Spark的
     def getDefaultApplicaitonId(self):
         emr_applications = self.client_serverless.list_applications()
@@ -70,6 +73,35 @@ class Session:
             raise Exception("没有找到活跃的 EMR Serverless 应用")
 
     # 初始化 SQL 模板文件
+    def initTemplateSQLFile(self):
+        with open('sql_template.py', 'w') as f:
+            f.write('''
+from pyspark.sql import SparkSession
+
+spark = (
+    SparkSession.builder.enableHiveSupport()
+    .appName("Python Spark SQL basic example")
+    .getOrCreate()
+)
+
+df = spark.sql("$query")
+df.show()
+        ''')
+
+    def initTemplateSQLString(self):
+       template = '''
+from pyspark.sql import SparkSession
+
+spark = (
+    SparkSession.builder.enableHiveSupport()
+    .appName("Python Spark SQL basic example")
+    .getOrCreate()
+)
+
+df = spark.sql("$query")
+df.show()
+    '''
+       return template
 
 
 # EMR Serverless 作业提交类
@@ -111,6 +143,34 @@ class EmrServerlessSession:
         result= self._submit_job_emr(jobname, script_file)
 
         return result
+
+    # 提交 SQL 作业到 EMR Serverless
+    def submit_sql(self,jobname, sql):
+        # 将 SQL 写入临时文件
+        print(f"RUN SQL:{sql}")
+        self.python_venv_conf=''
+        with open(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_template.py")
+        ) as f:
+            #query_file = Template(f.read()).substitute(query=sql.replace('"', '\\"'))
+            query_file = Template(self.initTemplateSQLString()).substitute(query=sql.replace('"', '\\"'))
+            script_bucket = self.tempfile_s3_path.split('/')[2]
+            script_key = '/'.join(self.tempfile_s3_path.split('/')[3:])
+
+            current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+            script_key = script_key+"sql_template_"+current_time+".py"
+            self.s3_client.put_object(
+                Body=query_file, Bucket=script_bucket, Key=script_key
+            )
+
+            script_file=f"s3://{script_bucket}/{script_key}"
+            result= self._submit_job_emr(jobname, script_file)
+
+            #delete the temp file
+            self.s3_client.delete_object(
+                Bucket=script_bucket, Key=script_key
+            )
+            return result
 
 
     def _submit_job_emr(self, name, script_file):#serverless
@@ -193,10 +253,12 @@ def emr_serverless_task():
             tempfile_s3_path='s3://emr-spark-hugo/tempfile/',
         )
 
-
+        # 提交脚本文件
         script_result = session_emrserverless.submit_file("script-task", "wordcount.py")
 
 
+        # 提交 SQL 语句
+        sql_result = session_emrserverless.submit_sql("sql-task", "SELECT * FROM xxtable LIMIT 10")
 
         # 检查任务执行结果
         if script_result:
@@ -215,5 +277,7 @@ if __name__ == "__main__":
     success = emr_serverless_task()
     if success:
         print("Task completed successfully.")
+        sys.exit(0)
     else:
         print("Task failed.")
+        sys.exit(1)
